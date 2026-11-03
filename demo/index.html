@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agent 工作流演示 · agent-playground</title>
+  <style>
+    :root {
+      --bg: #f5f6fb;
+      --surface: #ffffff;
+      --ink: #16192b;
+      --muted: #6b7280;
+      --line: #e6e8f0;
+      --accent: #4f46e5;
+      --accent-soft: #eef0ff;
+      --ok: #0f9d76;
+      --ok-soft: #e7f7f0;
+      --shadow: 0 18px 50px rgba(22, 25, 43, 0.08);
+      --mono: "SF Mono", ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { margin: 0; }
+
+    body {
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(900px 520px at 8% -12%, #e5e8ff 0%, transparent 62%),
+        radial-gradient(760px 440px at 102% -4%, #e2f7ef 0%, transparent 56%),
+        var(--bg);
+      font-family: var(--sans);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    .shell {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 56px 24px 40px;
+    }
+
+    .hero { margin-bottom: 30px; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin: 0 0 14px;
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .eyebrow .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-size: clamp(34px, 5vw, 48px);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+    }
+
+    .lede {
+      max-width: 640px;
+      margin: 0;
+      font-size: 16.5px;
+      color: var(--muted);
+    }
+
+    .facts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 24px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .facts li {
+      padding: 7px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+
+    .facts strong {
+      margin-right: 2px;
+      color: var(--ink);
+      font-size: 13.5px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .card {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .card-head h2 {
+      margin: 0;
+      font-size: 14.5px;
+      letter-spacing: 0.02em;
+    }
+
+    .pill {
+      padding: 4px 11px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .pill[data-status="done"] {
+      background: var(--ok-soft);
+      color: var(--ok);
+    }
+
+    .stages {
+      display: grid;
+      gap: 7px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .stage {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 11px 13px;
+      border: 1px solid transparent;
+      border-radius: 14px;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .stage[data-state="active"] {
+      background: var(--accent-soft);
+      border-color: #dfe3ff;
+    }
+
+    .stage-index {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: #fafbff;
+      color: var(--muted);
+      font-size: 11.5px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stage[data-state="active"] .stage-index {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .stage[data-state="done"] .stage-index {
+      border-color: transparent;
+      background: var(--ok-soft);
+      color: var(--ok);
+    }
+
+    .stage-copy {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .stage-label {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.005em;
+    }
+
+    .stage-detail {
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 12.5px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .stage-badge {
+      color: #9aa1b2;
+      font-size: 11.5px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .stage[data-state="active"] .stage-badge { color: var(--accent); }
+    .stage[data-state="done"] .stage-badge { color: var(--ok); }
+
+    .count {
+      color: var(--muted);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress {
+      height: 9px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #eef0f7;
+    }
+
+    .progress span {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #6366f1, #14b8a6);
+      transition: width 0.35s ease;
+    }
+
+    .current {
+      margin: 18px 0 4px;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .current-detail {
+      min-height: 21px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 13.5px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin: 18px 0 22px;
+    }
+
+    .btn {
+      padding: 9px 16px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      border-color: #cfd4e5;
+      transform: translateY(-1px);
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .btn:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
+
+    .btn.primary {
+      border-color: var(--ink);
+      background: var(--ink);
+      color: #fff;
+    }
+
+    .btn.primary:hover:not(:disabled) { background: #2a2f4a; }
+
+    .btn.ghost { background: transparent; }
+
+    .log-block {
+      padding-top: 14px;
+      border-top: 1px dashed var(--line);
+    }
+
+    .log-head {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 11.5px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .log {
+      display: grid;
+      gap: 6px;
+      max-height: 188px;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+      list-style: none;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .log:empty::after {
+      content: "尚无记录";
+      padding: 7px 9px;
+      color: #9aa1b2;
+      font-family: var(--sans);
+    }
+
+    .log li {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      gap: 8px;
+      padding: 7px 9px;
+      border-radius: 8px;
+      background: #f8f9fd;
+      color: #3b4158;
+    }
+
+    .log .n { color: #9aa1b2; }
+
+    .hint {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .hint code {
+      padding: 2px 6px;
+      border-radius: 5px;
+      background: #f1f3f9;
+      color: #3b4158;
+      font-family: var(--mono);
+      font-size: 11.5px;
+    }
+
+    .foot {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 26px;
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+
+    .foot a { color: var(--accent); text-decoration: none; }
+    .foot a:hover { text-decoration: underline; }
+
+    @media (max-width: 880px) {
+      .shell { padding-top: 38px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <p class="eyebrow"><span class="dot" aria-hidden="true"></span>dsh-superagent · 示例</p>
+      <h1>Agent 工作流演示</h1>
+      <p class="lede">从一句 Issue 需求，到一个可审查、可合并的 PR。推进下面的流水线，看看 Agent 在每个阶段做了什么。</p>
+      <ul class="facts" aria-label="示例信息">
+        <li><strong>7</strong> 个阶段</li>
+        <li><strong>0</strong> 个运行时依赖</li>
+        <li><strong>1</strong> 条命令完成验证</li>
+      </ul>
+    </header>
+
+    <div class="grid">
+      <section class="card" aria-labelledby="stages-title">
+        <div class="card-head">
+          <h2 id="stages-title">流水线</h2>
+          <span class="pill" id="flow-status" data-status="idle">准备就绪</span>
+        </div>
+        <ol class="stages" id="stage-list"></ol>
+      </section>
+
+      <section class="card" aria-labelledby="console-title">
+        <div class="card-head">
+          <h2 id="console-title">运行状态</h2>
+          <span class="count" id="progress-label">0%</span>
+        </div>
+
+        <div
+          class="progress"
+          id="progressbar"
+          role="progressbar"
+          aria-label="演示进度"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+        >
+          <span id="progress-fill"></span>
+        </div>
+
+        <p class="current" id="current-title" aria-live="polite">准备就绪</p>
+        <p class="current-detail" id="current-detail">点击「开始演示」，查看 Agent 如何处理一个 Issue</p>
+
+        <div class="controls">
+          <button class="btn primary" id="start" type="button">开始演示</button>
+          <button class="btn" id="next" type="button" disabled>下一步</button>
+          <button class="btn ghost" id="play" type="button">自动演示</button>
+          <button class="btn ghost" id="reset" type="button" disabled>重置</button>
+        </div>
+
+        <div class="log-block">
+          <div class="log-head"><span>运行日志</span><span id="log-count">0 条</span></div>
+          <ol class="log" id="log" aria-live="polite"></ol>
+        </div>
+
+        <p class="hint">验证命令：<code>node --test demo/agent-flow.test.js</code></p>
+      </section>
+    </div>
+
+    <footer class="foot">
+      <span>零依赖 · 可离线打开 · 由 dsh-superagent 生成</span>
+      <a href="https://github.com/VissageMo-agent/agent-playground">查看仓库</a>
+    </footer>
+  </main>
+
+  <script src="agent-flow.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      var flow = window.AgentFlow;
+      var elements = {
+        stageList: document.getElementById('stage-list'),
+        flowStatus: document.getElementById('flow-status'),
+        progressLabel: document.getElementById('progress-label'),
+        progressBar: document.getElementById('progressbar'),
+        progressFill: document.getElementById('progress-fill'),
+        currentTitle: document.getElementById('current-title'),
+        currentDetail: document.getElementById('current-detail'),
+        log: document.getElementById('log'),
+        logCount: document.getElementById('log-count'),
+        start: document.getElementById('start'),
+        next: document.getElementById('next'),
+        play: document.getElementById('play'),
+        reset: document.getElementById('reset')
+      };
+
+      var state = flow.createDemoState();
+      var timer = null;
+
+      function renderStages() {
+        var fragment = document.createDocumentFragment();
+
+        flow.STAGES.forEach(function (stage, index) {
+          var status = flow.stageState(state, index);
+          var item = document.createElement('li');
+          item.className = 'stage';
+          item.dataset.state = status;
+          if (status === 'active') {
+            item.setAttribute('aria-current', 'step');
+          }
+
+          var indexEl = document.createElement('span');
+          indexEl.className = 'stage-index';
+          indexEl.setAttribute('aria-hidden', 'true');
+          indexEl.textContent = status === 'done' ? '✓' : String(index + 1).padStart(2, '0');
+
+          var copy = document.createElement('span');
+          copy.className = 'stage-copy';
+          var label = document.createElement('span');
+          label.className = 'stage-label';
+          label.textContent = stage.label;
+          var detail = document.createElement('span');
+          detail.className = 'stage-detail';
+          detail.textContent = stage.detail;
+          copy.append(label, detail);
+
+          var badge = document.createElement('span');
+          badge.className = 'stage-badge';
+          badge.textContent = status === 'done' ? '已完成' : status === 'active' ? '进行中' : '待执行';
+
+          item.append(indexEl, copy, badge);
+          fragment.append(item);
+        });
+
+        elements.stageList.replaceChildren(fragment);
+      }
+
+      function renderLog() {
+        var fragment = document.createDocumentFragment();
+        state.entries.forEach(function (entry) {
+          var item = document.createElement('li');
+          var number = document.createElement('span');
+          number.className = 'n';
+          number.textContent = String(entry.step).padStart(2, '0');
+          var message = document.createElement('span');
+          message.textContent = entry.message;
+          item.append(number, message);
+          fragment.append(item);
+        });
+        elements.log.replaceChildren(fragment);
+        elements.logCount.textContent = state.entries.length + ' 条';
+        elements.log.scrollTop = elements.log.scrollHeight;
+      }
+
+      function renderControls() {
+        elements.start.disabled = state.status !== 'idle';
+        elements.next.disabled = state.status !== 'running';
+        elements.reset.disabled = state.status === 'idle';
+        elements.play.textContent = timer !== null
+          ? '暂停'
+          : state.status === 'done'
+            ? '重新演示'
+            : '自动演示';
+      }
+
+      function render() {
+        var percent = flow.progress(state);
+        var info = flow.summary(state);
+
+        elements.progressLabel.textContent = percent + '%';
+        elements.progressFill.style.width = percent + '%';
+        elements.progressBar.setAttribute('aria-valuenow', String(percent));
+        elements.currentTitle.textContent = info.title;
+        elements.currentDetail.textContent = info.detail;
+        elements.flowStatus.textContent = state.status === 'done'
+          ? '已完成'
+          : state.status === 'running'
+            ? '进行中'
+            : '准备就绪';
+        elements.flowStatus.dataset.status = state.status;
+
+        renderStages();
+        renderLog();
+        renderControls();
+      }
+
+      function stopTimer() {
+        if (timer !== null) {
+          window.clearInterval(timer);
+          timer = null;
+        }
+      }
+
+      function startTimer() {
+        timer = window.setInterval(function () {
+          state = flow.advance(state);
+          if (state.status === 'done') {
+            stopTimer();
+          }
+          render();
+        }, 900);
+      }
+
+      elements.start.addEventListener('click', function () {
+        stopTimer();
+        state = flow.start(state);
+        render();
+      });
+
+      elements.next.addEventListener('click', function () {
+        stopTimer();
+        state = flow.advance(state);
+        render();
+      });
+
+      elements.reset.addEventListener('click', function () {
+        stopTimer();
+        state = flow.reset();
+        render();
+      });
+
+      elements.play.addEventListener('click', function () {
+        if (timer !== null) {
+          stopTimer();
+          render();
+          return;
+        }
+        if (state.status === 'done') {
+          state = flow.reset();
+        }
+        if (state.status === 'idle') {
+          state = flow.start();
+        }
+        render();
+        if (state.status === 'running') {
+          startTimer();
+          render();
+        }
+      });
+
+      var step = new URLSearchParams(window.location.search).get('step');
+      if (step !== null) {
+        var steps = Math.max(0, Math.min(flow.STAGE_COUNT, parseInt(step, 10) || 0));
+        if (steps > 0) {
+          state = flow.start(state);
+          for (var index = 0; index < steps; index += 1) {
+            state = flow.advance(state);
+          }
+        }
+      }
+
+      render();
+    })();
+  </script>
+</body>
+</html>
