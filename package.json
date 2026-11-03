@@ -1,0 +1,13 @@
+{
+  "name": "agent-playground",
+  "version": "0.1.0",
+  "private": true,
+  "description": "dsh-superagent playground repository",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test demo/agent-flow.test.js"
+  }
+}
