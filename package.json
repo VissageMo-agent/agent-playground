@@ -8,6 +8,6 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --test demo/agent-flow.test.js"
+    "test": "node --test demo/agent-flow.test.js game/bubble-zen.test.js"
   }
 }
